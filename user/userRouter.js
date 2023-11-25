@@ -3,9 +3,9 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import Book from "../book/bookModel.js"
 import Theuser,{Transaction} from "./userModel.js";
-import multer from "multer";
-import path from "path";
+import uploadwithaws from "./sthree.js";
 const router = express.Router();
+
 
 
 const vretify_jwt = (req, res, next) => {
@@ -23,64 +23,38 @@ const vretify_jwt = (req, res, next) => {
       return res.status(403).json({ msg: "Invalid token" });
     }
   };
-
-  /////////////////////////////// Storage //////////////////////////////
-const storage = multer.diskStorage({
-  destination: (req, file, callback) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (ext !== ".jpg" && ext !== ".jpeg" && ext !== ".png") {
-      return callback(new Error("Only images are allowed"));
-    }
-    callback(null, "./images/users");
-  },
-  filename: (req, file, callback) => {
-    callback(null, Date.now() + path.extname(file.originalname));
-  },
-});
-const upload = multer({
-  storage: storage,
-  fileFilter: (req, file, callback) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (ext !== ".jpg" && ext !== ".jpeg" && ext !== ".png" && ext !== ".pdf") {
-      return callback(new Error("Only images are allowed"));
-    }
-    callback(null,  Date.now() + path.extname(file.originalname));
-  },
-});
 /////////////////////////////////// Register ///////////////////////////////
-router.post("/register",
-upload.fields([{ name: "image", maxCount: 1 }]),
-async (req, res) => {
-    try {
-      const { name, password, email,phone,address, role } = req.body;
-      const imagePath = req.files["image"] ? req.files["image"][0].path : "";
-      const egyptMobileRegex = /^(010|011|012|015)[0-9]{8}$/;
-      const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
-      if (!name.trim() || !password.trim() || !emailRegex.test(email) || !egyptMobileRegex.test(phone) || !address.trim()){
-        return res.status(400).json({ msg: "All fields are required" });
-      }
-      const hashedpassword = await bcrypt.hash(password, 12);
-      const newUser = new Theuser({
-        name: name,
-        password: hashedpassword,
-        email: email,
-        phone: phone,
-        address:address,
-        image:imagePath,
-        role: role || "customer",
-        used_vouchers:[],
-        owned_vouchers:[],
-        revenue: 0,
-        booksid: [],
-      });
-      await newUser.save();
-  
-      res.status(201).json({ msg: "User added successfully" });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: "An error occurred while adding the user" });
+router.post("/register", uploadwithaws("user").fields([{ name: "image", maxCount: 1 }]), async (req, res) => {
+  try {
+    const { name, password, email, phone, address, role } = req.body;
+    const imagePath = req.files && req.files.image[0].key ? req.files.image[0].key : "";
+    const egyptMobileRegex = /^(010|011|012|015)[0-9]{8}$/;
+    const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
+    if (!name.trim() || !password.trim() || !emailRegex.test(email) || !egyptMobileRegex.test(phone) || !address.trim()) {
+      return res.status(400).json({ msg: "All fields are required" });
     }
-  });
+    const hashedpassword = await bcrypt.hash(password, 12);
+    const newUser = new Theuser({
+      name: name,
+      password: hashedpassword,
+      email: email,
+      phone: phone,
+      address: address,
+      image: imagePath,
+      role: role || "customer",
+      used_vouchers: [],
+      owned_vouchers: [],
+      revenue: 0,
+      booksid: [],
+    });
+    await newUser.save();
+
+    res.status(201).json({ msg: "User added successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "An error occurred while adding the user" });
+  }
+});
   ////////////////////////////////////////////// Login //////////////////////////////////////////
   router.post("/login", async (req, res) => {
     try {

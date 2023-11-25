@@ -4,42 +4,43 @@ import path from "path";
 import Book from "./bookModel.js";
 import Theusers,{Transaction} from "../user/userModel.js";
 import { vretify_jwt } from "../user/userRouter.js";
+import uploadwithaws from "../user/sthree.js";
 
 const router = express.Router();
 /////////////////////////////// Storage //////////////////////////////
-const storage = multer.diskStorage({
-  destination: (req, file, callback) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (ext !== ".jpg" && ext !== ".jpeg" && ext !== ".png" && ext !== ".pdf") {
-      return callback(new Error("Only images and PDFs are allowed"));
-    }
-    const dest = path.extname(file.originalname) === '.pdf' ? './books/' : './images/books/';
-    callback(null, dest);
-  },
-  filename: (req, file, callback) => {
-    callback(null, Date.now() + path.extname(file.originalname));
-  },
-});
-const upload = multer({
-  storage: storage,
-  fileFilter: (req, file, callback) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    if (ext !== ".jpg" && ext !== ".jpeg" && ext !== ".png" && ext !== ".pdf") {
-      return callback(new Error("Only images and PDFs are allowed"));
-    }
-    callback(null,  Date.now() + path.extname(file.originalname));
-  },
-});
+// const storage = multer.diskStorage({
+//   destination: (req, file, callback) => {
+//     const ext = path.extname(file.originalname).toLowerCase();
+//     if (ext !== ".jpg" && ext !== ".jpeg" && ext !== ".png" && ext !== ".pdf") {
+//       return callback(new Error("Only images and PDFs are allowed"));
+//     }
+//     const dest = path.extname(file.originalname) === '.pdf' ? './books/' : './images/books/';
+//     callback(null, dest);
+//   },
+//   filename: (req, file, callback) => {
+//     callback(null, Date.now() + path.extname(file.originalname));
+//   },
+// });
+// const upload = multer({
+//   storage: storage,
+//   fileFilter: (req, file, callback) => {
+//     const ext = path.extname(file.originalname).toLowerCase();
+//     if (ext !== ".jpg" && ext !== ".jpeg" && ext !== ".png" && ext !== ".pdf") {
+//       return callback(new Error("Only images and PDFs are allowed"));
+//     }
+//     callback(null,  Date.now() + path.extname(file.originalname));
+//   },
+// });
 
 //////////////////////////////// ADD Book //////////////////////////////////
 router.post(
   "/addbook",
   vretify_jwt,
-  upload.fields([{ name: "image", maxCount: 1 }, { name: "bookpdf", maxCount: 1 }]),
+  uploadwithaws("books").fields([{ name: "image", maxCount: 1 }, { name: "bookpdf", maxCount: 1 }]),
   async (req, res) => {
     const { title, price, description, year, author, sale } = req.body;
-    const imagePath = req.files["image"] ? req.files["image"][0].path : "";
-    const pdfPath = req.files["bookpdf"] ? req.files["bookpdf"][0].path : "";
+    const imagePath = req.files && req.files.image[0].key ? req.files.image[0].key : "";
+    const pdfPath = req.files ? req.files.bookpdf[0].key : "";
     const userEmail = req.email;
     const user = await Theusers.findOne({ email: userEmail });
 
