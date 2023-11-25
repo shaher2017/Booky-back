@@ -17,7 +17,7 @@ app.use("/images", express.static(path.join(__dirname, "images")));
 app.use("/books", express.static(path.join(__dirname, "books")));
 
 app.use(express.json());
-app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+app.use(cors({ origin: process.env.FRONT_END_URL, credentials: true }));
 app.use(cookieParser());
 
 mongoose
